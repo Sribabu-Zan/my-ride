@@ -3,6 +3,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Leaflet gives its internal panes/controls very high z-index values (up to
+ * 1000). Pinning the container to its own stacking context keeps those layers
+ * from escaping and covering app UI (e.g. the location search panel/inputs).
+ */
+.leaflet-container {
+  position: relative;
+  z-index: 0;
+}
+
 /* From Uiverse.io by Nawsome */ 
 .socket {
     width: 200px;

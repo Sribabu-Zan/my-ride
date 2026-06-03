@@ -1,6 +1,5 @@
 const express=require("express")
 const router=express.Router()
-router.get("/get-coordinates",)
 const authMiddleware=require("../middlewares/auth.middleware")
 const mapContoller=require("../contollers/maps.controller")
 const {query} =require("express-validator")
@@ -16,6 +15,12 @@ router.get("/get-suggestions",
     query("input").isString().isLength({min:3}),
     authMiddleware.authUser,
     mapContoller.getAutoCompleteSuggestions
+)
+router.get("/reverse-geocode",
+    query("lat").isFloat(),
+    query("lng").isFloat(),
+    authMiddleware.authUser,
+    mapContoller.getReverseGeocode
 )
 
 module.exports=router;

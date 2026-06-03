@@ -27,6 +27,20 @@ module.exports.getDistanceTime= async (req,res,next)=>{
         res.status(500).json({message:"Server error in map controller"})
     }
 }
+module.exports.getReverseGeocode=async (req,res,next)=>{
+    try{
+        const error=validationResult(req)
+        if(!error.isEmpty()){
+            return res.status(400).json({message:"Invalid input",errors:error.array()});
+        }
+        const {lat,lng}=req.query;
+        const result=await mapService.getReverseGeocode(lat,lng)
+        res.status(200).json(result)
+    }
+    catch(err){
+        res.status(500).json({message:"Server error in map controller"})
+    }
+}
 module.exports.getAutoCompleteSuggestions=async (req,res,next)=>{
     try{
         const error=validationResult(req)
@@ -41,6 +55,6 @@ module.exports.getAutoCompleteSuggestions=async (req,res,next)=>{
 
     }
     catch(err){
-        res.status(500).json({message:"Server error ssgsgsg in map controller"})
+        res.status(500).json({message:"Server error in map controller"})
     }
 }

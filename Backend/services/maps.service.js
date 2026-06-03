@@ -1,93 +1,163 @@
 const axios = require('axios');
 const captainModel = require("../db/Models/captain.model");
-module.exports.getAddressCoordinate = async ( address ) => {
+
+// Keyless OpenStreetMap-based providers. Override via env in production.
+const NOMINATIM_URL = process.env.NOMINATIM_URL || "https://nominatim.openstreetmap.org";
+const OSRM_URL = process.env.OSRM_URL || "https://router.project-osrm.org";
+
+// Nominatim's usage policy requires a descriptive User-Agent identifying the app.
+const NOMINATIM_HEADERS = {
+    "User-Agent": process.env.NOMINATIM_USER_AGENT || "uber-clone/1.0 (maps service)"
+};
+
+// Restrict geocoding to these ISO country codes so results favour Indian places.
+const COUNTRY_CODES = process.env.GEOCODE_COUNTRY_CODES || "in";
+
+module.exports.getAddressCoordinate = async (address) => {
     if (!address) {
-        console.log("address is required")
         throw new Error("Address is required");
     }
-    const apiKey = process.env.MAPS_API_KEY;
-    let url = `https://maps.gomaps.pro/maps/api/geocode/json?key=${apiKey}&address=${encodeURIComponent(address)}`;
-    if(typeof address!=='string'){
-       
-        const faddress=address.address
-        url = `https://maps.gomaps.pro/maps/api/geocode/json?key=${apiKey}&address=${encodeURIComponent(faddress)}`;
+
+    // The controller passes req.query (an object); the rest of the app passes a string.
+    const query = typeof address === 'string' ? address : address.address;
+    if (!query) {
+        throw new Error("Address is required");
     }
 
-   
+    const url = `${NOMINATIM_URL}/search`;
 
     try {
-        const response = await axios.get(url);
-        // console.log(response)
-        const data = response.data;
+        const response = await axios.get(url, {
+            headers: NOMINATIM_HEADERS,
+            params: {
+                q: query,
+                format: "json",
+                limit: 1,
+                countrycodes: COUNTRY_CODES
+            }
+        });
 
-        if (data.status !== 'OK') {
-            throw new Error("Failed to fetch coordinates")
+        const data = response.data;
+        if (!Array.isArray(data) || data.length === 0) {
+            throw new Error("Failed to fetch coordinates");
         }
 
-        const location = data.results[0].geometry.location;
-        console.log("location in map service")
-      
         return {
-            latitude: location.lat,
-            longitude: location.lng
+            latitude: parseFloat(data[0].lat),
+            longitude: parseFloat(data[0].lon)
         };
     } catch (error) {
-        console.log(error.message);
         throw new Error("Error fetching coordinates: " + error.message);
     }
 };
-module.exports.getDistanceTime =async (origins,destinations)=>{
-    if(!origins || !destinations){
-        
-        throw new Error("Origin/Destination cant be null")
-    }
-    const apiKey = process.env.MAPS_API_KEY
-    const baseURL = "https://maps.gomaps.pro/maps/api/distancematrix/json";
-    const url = `${baseURL}?key=${apiKey}&origins=${encodeURIComponent(origins)}&destinations=${encodeURIComponent(destinations)}`;
-    try{
-        const response=await axios.get(url);
-        if(response.data.status==='OK'){
-            if(response.data.rows[0].elements[0].status==='ZERO_RESULTS'){
-                throw new Error("No route found")
-            }
-            return response.data.rows[0].elements[0];
-        }
-        else{
-            
-            throw new Error("Failed to fetch distance and time");
-        }
-    }
-    catch(err){
-      
-        console.log(err.message)
-       
-        throw new Error("Error fetching distance: "+err.message)
-    }
-    
-}
-module.exports.getAutoCompleteSuggestions =async (input)=>{
-    if(!input){ 
-        throw new Error("Input is null")
-    }
-  
-    const key = process.env.MAPS_API_KEY
-    const url = `https://maps.gomaps.pro/maps/api/place/queryautocomplete/json?input=${encodeURIComponent(input)}&key=${key}`;
 
-    try{
-        const response=await axios.get(url)
-        if(response.data.status==='OK'){
-            return response.data.predictions
-            }
-        else{
-            throw new Error("Failed to fetch suggestions")
+module.exports.getDistanceTime = async (origins, destinations) => {
+    if (!origins || !destinations) {
+        throw new Error("Origin/Destination cant be null");
+    }
+
+    // OSRM works on coordinates, so resolve both endpoints first.
+    const origin = await module.exports.getAddressCoordinate(origins);
+    const destination = await module.exports.getAddressCoordinate(destinations);
+
+    const coords = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
+    const url = `${OSRM_URL}/route/v1/driving/${coords}`;
+
+    try {
+        const response = await axios.get(url, {
+            params: { overview: "false" }
+        });
+        const data = response.data;
+
+        if (data.code !== "Ok" || !Array.isArray(data.routes) || data.routes.length === 0) {
+            throw new Error("No route found");
         }
 
+        const route = data.routes[0];
+        // Shape kept compatible with the previous Google distance-matrix element:
+        // distance.value in metres, duration.value in seconds.
+        return {
+            distance: {
+                value: route.distance,
+                text: `${(route.distance / 1000).toFixed(1)} km`
+            },
+            duration: {
+                value: route.duration,
+                text: `${Math.round(route.duration / 60)} mins`
+            }
+        };
+    } catch (err) {
+        throw new Error("Error fetching distance: " + err.message);
     }
-    catch(err){
-        console.log(err)
-        throw new Error("Error fetching suggestions: "+err.message)
+};
+
+module.exports.getAutoCompleteSuggestions = async (input) => {
+    if (!input) {
+        throw new Error("Input is null");
     }
-}
+
+    const url = `${NOMINATIM_URL}/search`;
+
+    try {
+        const response = await axios.get(url, {
+            headers: NOMINATIM_HEADERS,
+            params: {
+                q: input,
+                format: "json",
+                addressdetails: 1,
+                limit: 5,
+                countrycodes: COUNTRY_CODES
+            }
+        });
+
+        if (!Array.isArray(response.data)) {
+            throw new Error("Failed to fetch suggestions");
+        }
+
+        // Keep `description` so existing frontend consumers keep working.
+        return response.data.map((result) => ({
+            description: result.display_name,
+            placeId: result.place_id,
+            lat: parseFloat(result.lat),
+            lng: parseFloat(result.lon)
+        }));
+    } catch (err) {
+        throw new Error("Error fetching suggestions: " + err.message);
+    }
+};
+
+module.exports.getReverseGeocode = async (lat, lng) => {
+    if (lat === undefined || lng === undefined || lat === "" || lng === "") {
+        throw new Error("Latitude and longitude are required");
+    }
+
+    const url = `${NOMINATIM_URL}/reverse`;
+
+    try {
+        const response = await axios.get(url, {
+            headers: NOMINATIM_HEADERS,
+            params: {
+                lat,
+                lon: lng,
+                format: "json"
+            }
+        });
+
+        const data = response.data;
+        if (!data || !data.display_name) {
+            throw new Error("Failed to reverse geocode location");
+        }
+
+        return {
+            address: data.display_name,
+            latitude: parseFloat(data.lat),
+            longitude: parseFloat(data.lon)
+        };
+    } catch (error) {
+        throw new Error("Error reverse geocoding: " + error.message);
+    }
+};
+
 module.exports.getCaptainsInTheRadius = async (ltd, lng, radius) => {
     //// radius in km
     const captains = await captainModel.find({
@@ -96,6 +166,6 @@ module.exports.getCaptainsInTheRadius = async (ltd, lng, radius) => {
                 $centerSphere: [[ ltd, lng ], radius/6371]
             }
         }
-    }); 
+    });
     return captains;
 }

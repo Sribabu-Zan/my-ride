@@ -7,24 +7,20 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "postinstall": "npx patch-package || exit 0"
-
-
-
+    "preview": "vite preview"
   },
   "dependencies": {
     "@gsap/react": "^2.1.1",
-    "@react-google-maps/api": "^2.20.5",
     "axios": "^1.7.9",
     "flowbite": "^2.5.2",
     "flowbite-react": "^0.10.2",
     "gsap": "^3.12.5",
+    "leaflet": "^1.9.4",
     "ngrok": "^5.0.0-beta.2",
-    "patch-package": "^8.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.5.1",
+    "react-leaflet": "^4.2.1",
     "react-router-dom": "^7.1.1",
     "remixicon": "^4.6.0",
     "socket.io-client": "^4.8.1",
