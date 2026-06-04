@@ -1,6 +1,6 @@
 // Tunable pricing table. Could later be moved to the database / admin panel.
 // Amounts are in INR. distance in metres, duration in seconds at compute time.
-module.exports = {
+export default {
     local: {
         base:    { car: 50, auto: 30, motorcycle: 20 },
         perKm:   { car: 12, auto: 9,  motorcycle: 6 },

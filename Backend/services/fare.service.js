@@ -1,4 +1,4 @@
-const PRICING = require("../config/pricing");
+import PRICING from "../config/pricing.js";
 
 const VEHICLES = ["car", "auto", "motorcycle"];
 
@@ -72,4 +72,4 @@ function computeAllFares(args) {
     return { fares, breakup };
 }
 
-module.exports = { classifyTrip, computeFare, computeAllFares, VEHICLES };
+export { classifyTrip, computeFare, computeAllFares, VEHICLES };

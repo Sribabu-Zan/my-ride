@@ -1,60 +1,47 @@
-const { validationResult } = require("express-validator");
-const mapService=require("../services/maps.service")
-const axios=require("axios")
-module.exports.getCoordinates=async (req,res,next)=>{
-    const address=req.query;
-    try{
-        const coordinates=await mapService.getAddressCoordinate(address)
-        res.status(200).json(coordinates)
-    }
-    catch(err){
-        console.log(err)
-        res.status(500).json({message:"Server error in map controller"})
-        
-    }
-}
-module.exports.getDistanceTime= async (req,res,next)=>{
-    try{
-        const error=validationResult(req)
-        if(!error.isEmpty()){
-            return res.status(400).json({message:"Invalid input",errors:error.array()});
-            }
-        const {origins,destinations}=req.query;
-        const distanceTime=await mapService.getDistanceTime(origins,destinations)
-        res.status(200).json(distanceTime)
-    }
-    catch(err){
-        res.status(500).json({message:"Server error in map controller"})
-    }
-}
-module.exports.getReverseGeocode=async (req,res,next)=>{
-    try{
-        const error=validationResult(req)
-        if(!error.isEmpty()){
-            return res.status(400).json({message:"Invalid input",errors:error.array()});
-        }
-        const {lat,lng}=req.query;
-        const result=await mapService.getReverseGeocode(lat,lng)
-        res.status(200).json(result)
-    }
-    catch(err){
-        res.status(500).json({message:"Server error in map controller"})
-    }
-}
-module.exports.getAutoCompleteSuggestions=async (req,res,next)=>{
-    try{
-        const error=validationResult(req)
-        if(!error.isEmpty()){
-            return res.status(400).json({message:"Invalid input",errors:error.array()});
-        }
-        const {input}=req.query;
-       
-        const suggestions=await mapService.getAutoCompleteSuggestions(input)
-      
-        res.status(200).json(suggestions)
+import { validationResult } from "express-validator";
+import * as mapService from "../services/maps.service.js";
 
+export const getCoordinates = async (req, res) => {
+    try {
+        const coordinates = await mapService.getAddressCoordinate(req.query);
+        res.status(200).json(coordinates);
+    } catch (err) {
+        res.status(500).json({ message: "Server error in map controller" });
     }
-    catch(err){
-        res.status(500).json({message:"Server error in map controller"})
+};
+
+export const getDistanceTime = async (req, res) => {
+    try {
+        const error = validationResult(req);
+        if (!error.isEmpty()) return res.status(400).json({ message: "Invalid input", errors: error.array() });
+        const { origins, destinations } = req.query;
+        const distanceTime = await mapService.getDistanceTime(origins, destinations);
+        res.status(200).json(distanceTime);
+    } catch (err) {
+        res.status(500).json({ message: "Server error in map controller" });
     }
-}
+};
+
+export const getReverseGeocode = async (req, res) => {
+    try {
+        const error = validationResult(req);
+        if (!error.isEmpty()) return res.status(400).json({ message: "Invalid input", errors: error.array() });
+        const { lat, lng } = req.query;
+        const result = await mapService.getReverseGeocode(lat, lng);
+        res.status(200).json(result);
+    } catch (err) {
+        res.status(500).json({ message: "Server error in map controller" });
+    }
+};
+
+export const getAutoCompleteSuggestions = async (req, res) => {
+    try {
+        const error = validationResult(req);
+        if (!error.isEmpty()) return res.status(400).json({ message: "Invalid input", errors: error.array() });
+        const { input } = req.query;
+        const suggestions = await mapService.getAutoCompleteSuggestions(input);
+        res.status(200).json(suggestions);
+    } catch (err) {
+        res.status(500).json({ message: "Server error in map controller" });
+    }
+};

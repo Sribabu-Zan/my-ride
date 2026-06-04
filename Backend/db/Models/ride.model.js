@@ -1,4 +1,12 @@
-const mongoose = require("mongoose")
+import mongoose from "mongoose";
+
+const pointSchema = new mongoose.Schema(
+    {
+        type: { type: String, enum: ["Point"], default: "Point" },
+        coordinates: { type: [Number], default: undefined } // [lng, lat]
+    },
+    { _id: false }
+);
 
 const rideSchema = new mongoose.Schema({
     user: {
@@ -8,64 +16,55 @@ const rideSchema = new mongoose.Schema({
     },
     captain: {
         type: mongoose.Schema.ObjectId,
-        ref: "Captain",
-
+        ref: "Captain"
     },
     pickup: {
         type: String,
         required: true
-    }
-    ,
+    },
     destination: {
         type: String,
         required: true
     },
+    pickupLoc: pointSchema,
+    dropLoc: pointSchema,
     fare: {
         type: Number,
         required: true
-
+    },
+    fareBreakup: {
+        type: Object
     },
     status: {
         type: String,
-        enum: ['pending', 'accepted', 'completed', 'cancelled', 'ongoing', 'expired'],
-        default: 'pending'
+        enum: ["pending", "accepted", "completed", "cancelled", "ongoing", "expired"],
+        default: "pending"
     },
     vehicleType: {
         type: String,
-        enum: ['car', 'auto', 'motorcycle']
+        enum: ["car", "auto", "motorcycle"]
     },
     tripType: {
         type: String,
-        enum: ['local', 'intercity', 'interstate'],
-        default: 'local'
+        enum: ["local", "intercity", "interstate"],
+        default: "local"
     },
     bookingMode: {
         type: String,
-        enum: ['now', 'scheduled'],
-        default: 'now'
+        enum: ["now", "scheduled"],
+        default: "now"
     },
-    scheduledAt: {
-        type: Date
-    },
-    duration: {
-        type: Number ///in seconds
-    },
-    distance: {
-        type: Number///in metres
-    },
-    paymentID: {
-        type: String
-    },
-    orderId: {
-        type: String
-    },
-    signature: {
-        type: String
-    },
-    otp:{
-        type:String,
-        selected:false,
-        required:true
+    scheduledAt: { type: Date },
+    duration: { type: Number }, // seconds
+    distance: { type: Number }, // metres
+    paymentID: { type: String },
+    orderId: { type: String },
+    signature: { type: String },
+    otp: {
+        type: String,
+        select: false,
+        required: true
     }
-})
-module.exports=mongoose.model('ride',rideSchema);
+});
+
+export default mongoose.model("ride", rideSchema);

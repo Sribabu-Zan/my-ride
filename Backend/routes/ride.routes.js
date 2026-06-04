@@ -1,39 +1,43 @@
-const express=require("express")
-const router=express.Router()
-const {body,query}=require("express-validator")
-const rideContoller=require("../contollers/ride.controller")
-const authMiddleware=require("../middlewares/auth.middleware")
+import express from "express";
+import { body, query } from "express-validator";
+import * as rideController from "../contollers/ride.controller.js";
+import * as authMiddleware from "../middlewares/auth.middleware.js";
+
+const router = express.Router();
+
 router.post("/create",
     authMiddleware.authUser,
+    body("pickup").isString().isLength({ min: 3 }).withMessage("invalid pickup location"),
+    body("destination").isString().isLength({ min: 3 }).withMessage("invalid destination"),
+    body("vehicleType").isString().isIn(["auto", "car", "motorcycle"]).withMessage("invalid vehicle"),
+    body("bookingMode").optional().isIn(["now", "scheduled"]),
+    rideController.createRide
+);
 
-    body("pickup").isString().isLength({min:3}).withMessage("invalid pickup location"),
-    body("destination").isString().isLength({min:3}).withMessage("invalid destination"),
-    body("vehicleType").isString().isIn(['auto','car','motorcycle']).withMessage("invalid vehicle"),
-    rideContoller.createRide
-)
 router.get("/get-fare",
     authMiddleware.authUser,
-    query("pickup").isString().isLength({min:3}).withMessage("invalid pickup location"),
-    query("destination").isString().isLength({min:3}).withMessage("invalid destination"),
-    rideContoller.getFare
-)
+    query("pickup").isString().isLength({ min: 3 }).withMessage("invalid pickup location"),
+    query("destination").isString().isLength({ min: 3 }).withMessage("invalid destination"),
+    rideController.getFare
+);
+
 router.post("/confirm",
     authMiddleware.authCaptain,
-    body("rideId").isString().isLength({min:24}).withMessage("invalid ride id"),
-    rideContoller.confirmRide
-)
-router.get('/start-ride',
+    body("rideId").isString().isLength({ min: 24 }).withMessage("invalid ride id"),
+    rideController.confirmRide
+);
+
+router.get("/start-ride",
     authMiddleware.authCaptain,
-    query('rideId').isMongoId().withMessage('Invalid ride id'),
-    query('otp').isString().isLength({ min: 6, max: 6 }).withMessage('Invalid OTP'),
-    rideContoller.startRide,
-)
+    query("rideId").isMongoId().withMessage("Invalid ride id"),
+    query("otp").isString().isLength({ min: 6, max: 6 }).withMessage("Invalid OTP"),
+    rideController.startRide
+);
+
 router.post("/end-ride",
     authMiddleware.authCaptain,
-    body("rideId").isString().isLength({min:24}).withMessage("invalid ride id"),
-    rideContoller.endRide
-)
+    body("rideId").isString().isLength({ min: 24 }).withMessage("invalid ride id"),
+    rideController.endRide
+);
 
-
-
-module.exports=router
+export default router;
