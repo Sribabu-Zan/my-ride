@@ -1,56 +1,53 @@
 const rideModel = require("../db/Models/ride.model");
 const mapService = require("../services/maps.service");
-const bcrypt = require('bcrypt');
+const { classifyTrip, computeAllFares } = require("./fare.service");
 const crypto = require('crypto');
+
+// Returns vehicle fares (backward-compatible top-level keys) PLUS the trip
+// classification, distance/duration and fare breakup for richer clients.
 async function getFare(pickup, destination) {
     if (!pickup || !destination) {
         throw new Error("Missing pickup or destination");
     }
-    const distanceTime = await mapService.getDistanceTime(pickup, destination);
-    console.log("distanceTime")
-    console.log(distanceTime)
-    
-    const baseFare = {
-        car: 50,
-        auto: 30,
-        motorcycle: 20
-    };
 
-    const perKmRate = {
-        car: 10,
-        auto: 8,
-        motorcycle: 5
+    const origin = await mapService.getGeocodeDetailed(pickup);
+    const dest = await mapService.getGeocodeDetailed(destination);
+    const tripType = classifyTrip(origin, dest);
+
+    const { distance, duration } = await mapService.getRouteByCoords(origin, dest);
+    const { fares, breakup } = computeAllFares({ tripType, distanceM: distance, durationS: duration });
+
+    return {
+        ...fares,            // car, auto, motorcycle (kept for the web app)
+        fares,               // same, namespaced for new clients
+        tripType,            // local | intercity | interstate
+        distance,            // metres
+        duration,            // seconds
+        breakup,
     };
-    const perMinuteRate = {
-        car: 2,
-        auto: 1.5,
-        motorcycle: 1
-    };
-    const fare={
-        auto: Math.round(baseFare.auto +((distanceTime.distance.value/1000) *perKmRate.auto) +((distanceTime.duration.value/60) * perMinuteRate.auto)),
-        car: Math.round(baseFare.car +((distanceTime.distance.value/1000) *perKmRate.car) + ((distanceTime.duration.value/60) * perMinuteRate.car)),
-        motorcycle: Math.round(baseFare.motorcycle +((distanceTime.distance.value/1000) *perKmRate.motorcycle) + ((distanceTime.duration.value/60) * perMinuteRate.motorcycle))
-    }
-    return fare
 }
-module.exports.getFare=getFare;
-module.exports.createRide = async ({user,pickup,destination,vehicleType}) => {
+module.exports.getFare = getFare;
+module.exports.createRide = async ({ user, pickup, destination, vehicleType, bookingMode = "now", scheduledAt }) => {
 
     if(!user || !pickup || !destination || !vehicleType){
         throw new Error("Missing user, pickup, destination or vehicle type")
         }
-    const fare= await getFare(pickup,destination);
-    
-    const ride=rideModel.create({
+    const fareInfo = await getFare(pickup, destination);
+
+    const ride = rideModel.create({
         user,
         pickup,
         destination,
-        otp:getOTP(6),
-        fare:fare[vehicleType]
-    })
-    return ride
-
-    
+        otp: getOTP(6),
+        fare: fareInfo[vehicleType],
+        vehicleType,
+        tripType: fareInfo.tripType,
+        distance: fareInfo.distance,
+        duration: fareInfo.duration,
+        bookingMode,
+        scheduledAt: bookingMode === "scheduled" ? scheduledAt : undefined,
+    });
+    return ride;
 };
 function getOTP(num){
     const otp = crypto.randomInt(Math.pow(10, num - 1), Math.pow(10, num)).toString();

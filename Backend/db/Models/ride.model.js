@@ -27,8 +27,25 @@ const rideSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'accepted', 'completed', 'cancelled', 'ongoing'],
+        enum: ['pending', 'accepted', 'completed', 'cancelled', 'ongoing', 'expired'],
         default: 'pending'
+    },
+    vehicleType: {
+        type: String,
+        enum: ['car', 'auto', 'motorcycle']
+    },
+    tripType: {
+        type: String,
+        enum: ['local', 'intercity', 'interstate'],
+        default: 'local'
+    },
+    bookingMode: {
+        type: String,
+        enum: ['now', 'scheduled'],
+        default: 'now'
+    },
+    scheduledAt: {
+        type: Date
     },
     duration: {
         type: Number ///in seconds

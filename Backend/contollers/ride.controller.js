@@ -8,9 +8,9 @@ module.exports.createRide = async (req, res) => {
     if (!erros.isEmpty()) {
         return res.status(400).json({ message: erros.array() })
     }
-    const { userID, pickup, destination, vehicleType } = req.body;
+    const { pickup, destination, vehicleType, bookingMode, scheduledAt } = req.body;
     try {
-        const ride = await rideService.createRide({ user: req.user._id, pickup, destination, vehicleType })
+        const ride = await rideService.createRide({ user: req.user._id, pickup, destination, vehicleType, bookingMode, scheduledAt })
         const pickupCoordinates=await mapService.getAddressCoordinate(pickup)
         console.log(pickupCoordinates)
         const captainsInRadius=await mapService.getCaptainsInTheRadius(pickupCoordinates.latitude,pickupCoordinates.longitude,2)

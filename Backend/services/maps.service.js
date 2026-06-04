@@ -51,6 +51,51 @@ module.exports.getAddressCoordinate = async (address) => {
     }
 };
 
+// Geocode an address AND return its administrative components (city, state),
+// used to classify a trip as local / intercity / interstate.
+module.exports.getGeocodeDetailed = async (address) => {
+    if (!address) throw new Error("Address is required");
+    const query = typeof address === "string" ? address : address.address;
+
+    const response = await axios.get(`${NOMINATIM_URL}/search`, {
+        headers: NOMINATIM_HEADERS,
+        params: {
+            q: query,
+            format: "json",
+            limit: 1,
+            addressdetails: 1,
+            countrycodes: COUNTRY_CODES,
+        },
+    });
+
+    const data = response.data;
+    if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("Failed to fetch coordinates");
+    }
+
+    const a = data[0].address || {};
+    return {
+        latitude: parseFloat(data[0].lat),
+        longitude: parseFloat(data[0].lon),
+        city: a.city || a.town || a.village || a.county || null,
+        state: a.state || null,
+        display: data[0].display_name,
+    };
+};
+
+// OSRM route between two { latitude, longitude } points → { distance, duration }.
+module.exports.getRouteByCoords = async (origin, destination) => {
+    const coords = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
+    const response = await axios.get(`${OSRM_URL}/route/v1/driving/${coords}`, {
+        params: { overview: "false" },
+    });
+    const data = response.data;
+    if (data.code !== "Ok" || !Array.isArray(data.routes) || data.routes.length === 0) {
+        throw new Error("No route found");
+    }
+    return { distance: data.routes[0].distance, duration: data.routes[0].duration };
+};
+
 module.exports.getDistanceTime = async (origins, destinations) => {
     if (!origins || !destinations) {
         throw new Error("Origin/Destination cant be null");
@@ -139,7 +184,8 @@ module.exports.getReverseGeocode = async (lat, lng) => {
             params: {
                 lat,
                 lon: lng,
-                format: "json"
+                format: "json",
+                addressdetails: 1
             }
         });
 
@@ -148,10 +194,13 @@ module.exports.getReverseGeocode = async (lat, lng) => {
             throw new Error("Failed to reverse geocode location");
         }
 
+        const a = data.address || {};
         return {
             address: data.display_name,
             latitude: parseFloat(data.lat),
-            longitude: parseFloat(data.lon)
+            longitude: parseFloat(data.lon),
+            city: a.city || a.town || a.village || a.county || null,
+            state: a.state || null
         };
     } catch (error) {
         throw new Error("Error reverse geocoding: " + error.message);

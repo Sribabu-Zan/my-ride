@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Uber Clone",
+    "slug": "uber-clone-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "uberclone",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We use your location to set pickup and show the route."
+      }
+    },
+    "android": {
+      "package": "com.uberclone.mobile",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "We use your location to set pickup and show the route."
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "http://10.0.2.2:4000",
+      "osrmUrl": "https://router.project-osrm.org",
+      "tileUrl": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    }
+  }
+}
